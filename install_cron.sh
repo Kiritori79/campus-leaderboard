@@ -58,7 +58,7 @@ if (( HOUR < 0 || HOUR > 23 || MIN < 0 || MIN > 59 )); then
   exit 1
 fi
 
-JOB="$MIN $HOUR * * * cd $DIR && $PYTHON track.py && $PYTHON build.py >> $LOG 2>&1 $MARKER"
+JOB="$MIN $HOUR * * * cd $DIR && $PYTHON track.py && $PYTHON build.py && git push >> $LOG 2>&1 $MARKER"
 
 # 合并现有 crontab，去掉旧条目后追加
 TMP="$(mktemp)"
