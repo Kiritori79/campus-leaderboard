@@ -1,0 +1,7 @@
+config.py
+auto.log
+__pycache__/
+*.pyc
+.DS_Store
+.workbuddy/
+.railway/

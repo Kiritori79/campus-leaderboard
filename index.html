@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creator Leaderboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <style>
+    :root {
+      --purple-900: #4c1d95;
+      --purple-700: #6d28d9;
+      --purple-600: #7c3aed;
+      --purple-500: #8b5cf6;
+      --purple-400: #a78bfa;
+      --purple-300: #c4b5fd;
+      --purple-200: #ddd6fe;
+      --purple-100: #ede9fe;
+      --purple-50: #f5f3ff;
+      --white: #ffffff;
+      --text: #1e1b4b;
+      --text-muted: #6b7280;
+      --shadow: 0 4px 24px rgba(109, 40, 217, 0.10);
+      --shadow-lg: 0 12px 40px rgba(109, 40, 217, 0.14);
+      --row-h: 39px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(160deg, var(--purple-50) 0%, #faf5ff 40%, var(--white) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(139, 92, 246, 0.18), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 10%, rgba(167, 139, 250, 0.15), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    .hero {
+      background: var(--white);
+      border: 1px solid var(--purple-200);
+      border-radius: 20px;
+      padding: 24px 28px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hero-left { flex: 1; min-width: 200px; }
+
+    h1 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--purple-900), var(--purple-600));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .activity-title {
+      margin-top: 6px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--purple-700);
+    }
+
+    .date-badge {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--purple-700);
+      background: linear-gradient(135deg, var(--purple-100), var(--white));
+      border: 1px solid var(--purple-200);
+      padding: 12px 20px;
+      border-radius: 14px;
+      min-width: 200px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.08);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 18px;
+      background: var(--white);
+      border: 1px solid var(--purple-200);
+      border-radius: 16px;
+      padding: 14px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .seg {
+      display: flex;
+      background: var(--purple-50);
+      border: 1px solid var(--purple-200);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .seg button {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: none;
+    }
+
+    .seg button:hover { transform: none; background: var(--purple-100); }
+    .seg button.active {
+      background: var(--white);
+      color: var(--purple-700);
+      box-shadow: 0 1px 4px rgba(109, 40, 217, 0.12);
+    }
+
+    button {
+      background: var(--white);
+      color: var(--purple-700);
+      border: 1px solid var(--purple-200);
+      border-radius: 10px;
+      padding: 9px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: var(--purple-50);
+      border-color: var(--purple-400);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, var(--purple-600), var(--purple-500));
+      color: var(--white);
+      border: none;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+    }
+
+    button.primary:hover {
+      background: linear-gradient(135deg, var(--purple-700), var(--purple-600));
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    select {
+      background: var(--purple-50);
+      color: var(--purple-900);
+      border: 1px solid var(--purple-200);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .toolbar label.hidden { display: none; }
+
+    .bot-picker { position: relative; }
+
+    .bot-picker-btn {
+      min-width: 140px;
+      text-align: left;
+      padding-right: 28px;
+      position: relative;
+    }
+
+    .bot-picker-btn::after {
+      content: "▾";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .bot-picker-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 30;
+      width: min(360px, 88vw);
+      max-height: 360px;
+      background: var(--white);
+      border: 1px solid var(--purple-200);
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bot-picker-menu.hidden { display: none; }
+
+    .bot-picker-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px;
+      border-bottom: 1px solid var(--purple-100);
+      flex-shrink: 0;
+    }
+
+    .bot-picker-actions button {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    .bot-picker-list {
+      overflow-y: auto;
+      padding: 8px;
+      flex: 1;
+    }
+
+    .bot-picker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .bot-picker-item:hover { background: var(--purple-50); }
+
+    .bot-picker-item input { cursor: pointer; flex-shrink: 0; }
+
+    .bot-picker-item span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .panel {
+      background: var(--white);
+      border: 1px solid var(--purple-200);
+      border-radius: 20px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .panel.hidden { display: none; }
+
+    /* ── Racing bar chart ── */
+    .race-track {
+      position: relative;
+      width: 100%;
+    }
+
+    .race-row {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 34px;
+      display: grid;
+      grid-template-columns: 32px minmax(140px, 1.4fr) 1fr 88px;
+      align-items: center;
+      gap: 10px;
+      padding: 0 2px;
+      border-radius: 10px;
+      will-change: transform;
+    }
+
+    .race-row:hover { background: var(--purple-50); }
+
+    .race-row.rank-changed {
+      animation: rankFlash 0.65s ease-out;
+    }
+
+    @keyframes rankFlash {
+      0%   { background: rgba(139, 92, 246, 0.22); }
+      100% { background: transparent; }
+    }
+
+    .rank {
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text-muted);
+      width: 26px;
+      height: 26px;
+      line-height: 26px;
+      border-radius: 8px;
+      margin: 0 auto;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .rank.top1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; }
+    .rank.top2 { background: linear-gradient(135deg, #d1d5db, #9ca3af); color: #fff; }
+    .rank.top3 { background: linear-gradient(135deg, #fcd34d, #d97706); color: #fff; }
+
+    .race-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 4px;
+    }
+
+    .bar-wrap {
+      height: 22px;
+      background: var(--purple-50);
+      border: 1px solid var(--purple-100);
+      border-radius: 6px;
+      overflow: visible;
+      position: relative;
+    }
+
+    .bar {
+      height: 100%;
+      border-radius: 5px;
+      min-width: 2px;
+      position: relative;
+      will-change: width;
+    }
+
+    .bar.growing::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 16px;
+      border-radius: 50%;
+      background: inherit;
+      filter: blur(4px);
+      opacity: 0.7;
+      animation: barGlow 0.8s ease-out;
+    }
+
+    @keyframes barGlow {
+      0%   { opacity: 0.9; transform: translateY(-50%) scale(1.4); }
+      100% { opacity: 0;   transform: translateY(-50%) scale(1); }
+    }
+
+    .race-value {
+      text-align: right;
+      font-size: 13px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--purple-700);
+    }
+
+    .lines-wrap {
+      position: relative;
+      height: min(520px, 62vh);
+      min-height: 320px;
+    }
+
+    .lines-wrap svg { display: block; width: 100%; height: calc(100% - 36px); }
+
+    .lines-wrap .line-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      justify-content: center;
+      padding-top: 8px;
+      max-height: 36px;
+      overflow: hidden;
+    }
+
+    .lines-wrap .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #4c1d95;
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 0.15s;
+    }
+
+    .lines-wrap .legend-item.off { opacity: 0.35; text-decoration: line-through; }
+
+    .lines-wrap .legend-swatch {
+      width: 12px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    .lines-wrap .line-path { transition: none; }
+
+    .lines-wrap .line-tip {
+      filter: drop-shadow(0 0 3px currentColor);
+      pointer-events: none;
+    }
+
+    .lines-wrap .axis text { fill: #6b7280; font-size: 11px; }
+    .lines-wrap .axis line, .lines-wrap .axis path { stroke: #ede9fe; }
+    .lines-wrap .axis-label { fill: #6d28d9; font-size: 11px; font-weight: 600; }
+
+    .empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 72px 24px;
+      font-size: 15px;
+    }
+
+    .foot {
+      margin-top: 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 720px) {
+      .race-row {
+        grid-template-columns: 28px 1fr 72px;
+        grid-template-rows: auto auto;
+        height: auto;
+        padding: 6px 2px;
+        gap: 4px 8px;
+      }
+      .race-label { grid-column: 2 / 4; }
+      .bar-wrap { grid-column: 2 / 3; }
+      .race-value { grid-column: 3 / 4; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="hero-left">
+        <h1>Creator Leaderboard</h1>
+        <div class="activity-title" id="activityTitle"></div>
+      </div>
+      <div class="date-badge" id="dateLabel">—</div>
+    </div>
+
+    <div class="toolbar">
+      <div class="seg">
+        <button id="barsBtn" class="active" type="button">Bars</button>
+        <button id="linesBtn" type="button">Lines</button>
+      </div>
+      <button class="primary" id="playBtn" type="button">▶ Play</button>
+      <button id="restartBtn" type="button">↺ Replay</button>
+      <label id="viewModeLabel">View
+        <select id="viewModeSelect">
+          <option value="bot" selected>Bot</option>
+          <option value="author">Author</option>
+        </select>
+      </label>
+      <label id="topLabel">Top
+        <select id="topSelect">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="9999">All</option>
+        </select>
+      </label>
+      <label id="linesBotsLabel" class="hidden">Bots
+        <div class="bot-picker" id="botPicker">
+          <button class="bot-picker-btn" id="botPickerBtn" type="button">Top 20</button>
+          <div class="bot-picker-menu hidden" id="botPickerMenu">
+            <div class="bot-picker-actions">
+              <button type="button" data-preset="10">Top 10</button>
+              <button type="button" data-preset="20">Top 20</button>
+              <button type="button" data-preset="50">Top 50</button>
+              <button type="button" data-preset="all">All</button>
+            </div>
+            <div class="bot-picker-list" id="botPickerList"></div>
+          </div>
+        </div>
+      </label>
+      <label>Speed
+        <select id="speedSelect">
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel" id="barsPanel">
+      <div id="barsChart"></div>
+    </div>
+    <div class="panel hidden" id="linesPanel">
+      <div class="lines-wrap" id="linesChart"></div>
+    </div>
+    <div class="foot" id="foot"></div>
+  </div>
+
+  <script>
+    const board = {"name": "Campus Character Creation", "days": ["2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03"], "racers": [{"cid": "4UBh5", "name": "Rush Week", "creator": "TheDirkFiles", "label": "TheDirkFiles · Rush Week", "firstDay": 0, "series": [284843, 304753, 322388, 322388]}, {"cid": "4UBUW", "name": "Cameron Hayes", "creator": "Amal", "label": "Amal · Cameron Hayes", "firstDay": 0, "series": [153214, 194166, 231757, 231757]}, {"cid": "4VKbE", "name": "The Pick Me Who Ruined the Team", "creator": "Lucy Scarlet", "label": "Lucy Scarlet · The Pick Me Who Ruined the Team", "firstDay": 0, "series": [102448, 121150, 136016, 136016]}, {"cid": "4pmXt", "name": "Your Untouchable Crush", "creator": "Diana", "label": "Diana · Your Untouchable Crush", "firstDay": 0, "series": [41619, 57652, 68730, 68730]}, {"cid": "4JASY", "name": "The Queen You Ignore", "creator": "Vexx", "label": "Vexx · The Queen You Ignore", "firstDay": 0, "series": [6085, 9251, 38539, 38539]}, {"cid": "48YdX", "name": "Non innamorarti del tuo professore", "creator": "Diana", "label": "Diana · Non innamorarti del tuo professore", "firstDay": 0, "series": [16376, 19023, 21609, 21609]}, {"cid": "483KH", "name": "One unforgettable night", "creator": "Voxmire", "label": "Voxmire · One unforgettable night", "firstDay": 0, "series": [14770, 16281, 17334, 17334]}, {"cid": "4pmZU", "name": "Simon Riley - Dormmates", "creator": "Reaper", "label": "Reaper · Simon Riley - Dormmates", "firstDay": 0, "series": [15183, 15841, 16196, 16196]}, {"cid": "4p7kS", "name": "Simon Riley - Dorm Roommate's", "creator": "Reaper", "label": "Reaper · Simon Riley - Dorm Roommate's", "firstDay": 0, "series": [13387, 13756, 13940, 13940]}, {"cid": "4UEGr", "name": "Simon Riley - A Winning Streak", "creator": "Reaper", "label": "Reaper · Simon Riley - A Winning Streak", "firstDay": 0, "series": [10456, 11485, 11992, 11992]}, {"cid": "4Ubw5", "name": "夏海 - 和青梅竹馬的戀愛", "creator": "Hoshino_,", "label": "Hoshino_, · 夏海 - 和青梅竹馬的戀愛", "firstDay": 0, "series": [8160, 10113, 11006, 11006]}, {"cid": "48zkz", "name": "The Boundaries we Keep", "creator": "Lucy Scarlet", "label": "Lucy Scarlet · The Boundaries we Keep", "firstDay": 0, "series": [9408, 9697, 10480, 10480]}, {"cid": "4J82h", "name": "Midnight", "creator": "Evan", "label": "Evan · Midnight", "firstDay": 0, "series": [6234, 6917, 8054, 8054]}, {"cid": "4837G", "name": "Wesley 'Wes' Bright", "creator": "Hush", "label": "Hush · Wesley 'Wes' Bright", "firstDay": 0, "series": [6236, 7251, 7702, 7702]}, {"cid": "4UP8z", "name": "Deconstructing Rozochka", "creator": "TheDirkFiles", "label": "TheDirkFiles · Deconstructing Rozochka", "firstDay": 0, "series": [7366, 7481, 7650, 7650]}, {"cid": "4UA75", "name": "Falling for the basketball coach", "creator": "Voxmire", "label": "Voxmire · Falling for the basketball coach", "firstDay": 0, "series": [6568, 7013, 7042, 7042]}, {"cid": "4XAyb", "name": "TF141 - Noctis Academy", "creator": "Reaper", "label": "Reaper · TF141 - Noctis Academy", "firstDay": 0, "series": [6523, 6898, 6905, 6905]}, {"cid": "4UAph", "name": "The Freshman With the Sign", "creator": "L-Scarlet", "label": "L-Scarlet · The Freshman With the Sign", "firstDay": 0, "series": [3022, 3034, 3159, 3159]}, {"cid": "4JdgJ", "name": "Student house", "creator": "Voxmire", "label": "Voxmire · Student house", "firstDay": 0, "series": [2160, 2705, 3139, 3139]}, {"cid": "4Kkqw", "name": "Daisy Wants You To ''Play''", "creator": "Marcus Goob", "label": "Marcus Goob · Daisy Wants You To ''Play''", "firstDay": 0, "series": [2672, 2679, 2817, 2817]}, {"cid": "4ULFt", "name": "English teacher x  basketball coach", "creator": "Voxmire", "label": "Voxmire · English teacher x  basketball coach", "firstDay": 0, "series": [2463, 2473, 2807, 2807]}, {"cid": "48TWk", "name": "Byron", "creator": "Naila", "label": "Naila · Byron", "firstDay": 0, "series": [2343, 2450, 2630, 2630]}, {"cid": "4XGGv", "name": "Rafferty Sinclair", "creator": "Athena", "label": "Athena · Rafferty Sinclair", "firstDay": 0, "series": [2182, 2183, 2183, 2183]}, {"cid": "4KVNS", "name": "Meet Her Family", "creator": "Marcus Goob", "label": "Marcus Goob · Meet Her Family", "firstDay": 0, "series": [1907, 1950, 1987, 1987]}, {"cid": "4aA5L", "name": "Kian - Geheimer Campuswolf", "creator": "Narzia 🫶🏻🤘🏻", "label": "Narzia 🫶🏻🤘🏻 · Kian - Geheimer Campuswolf", "firstDay": 1, "series": [0, 0, 1869, 1869]}, {"cid": "4XJqa", "name": "Callum 'Cal' Garrick", "creator": "Athena", "label": "Athena · Callum 'Cal' Garrick", "firstDay": 0, "series": [1395, 1395, 1491, 1491]}, {"cid": "4UdEc", "name": "Wednesday and Enid - Your Roommates", "creator": "Cloudz", "label": "Cloudz · Wednesday and Enid - Your Roommates", "firstDay": 0, "series": [1171, 1171, 1462, 1462]}, {"cid": "4UcKn", "name": "Eri", "creator": "Evan", "label": "Evan · Eri", "firstDay": 0, "series": [1315, 1323, 1364, 1364]}, {"cid": "4XZEs", "name": "Jude Mercer", "creator": "Athena", "label": "Athena · Jude Mercer", "firstDay": 0, "series": [947, 948, 948, 948]}, {"cid": "4YU9q", "name": "You want a normal college experience", "creator": "Iggy Raven", "label": "Iggy Raven · You want a normal college experience", "firstDay": 0, "series": [8, 774, 944, 944]}, {"cid": "4V36b", "name": "The Sunbae Problem", "creator": "TheDirkFiles", "label": "TheDirkFiles · The Sunbae Problem", "firstDay": 0, "series": [933, 933, 933, 933]}, {"cid": "4JsYY", "name": "拜倫", "creator": "夢想", "label": "夢想 · 拜倫", "firstDay": 0, "series": [885, 885, 885, 885]}, {"cid": "4VM6m", "name": "Sebastian Crowley", "creator": "Hush", "label": "Hush · Sebastian Crowley", "firstDay": 0, "series": [763, 763, 764, 764]}, {"cid": "4Jq6k", "name": "Karim", "creator": "Naila", "label": "Naila · Karim", "firstDay": 0, "series": [730, 736, 740, 740]}, {"cid": "4p7Hc", "name": "Geto", "creator": "Loulou ⋆.˚✮", "label": "Loulou ⋆.˚✮ · Geto", "firstDay": 0, "series": [692, 692, 692, 692]}, {"cid": "48DdC", "name": "I Did Not Like My Dorm Roommate", "creator": "TheDirkFiles", "label": "TheDirkFiles · I Did Not Like My Dorm Roommate", "firstDay": 0, "series": [640, 640, 640, 640]}, {"cid": "4KQfw", "name": "Luke Davis - Nerd", "creator": "Sweet_Darling", "label": "Sweet_Darling · Luke Davis - Nerd", "firstDay": 0, "series": [571, 571, 571, 571]}, {"cid": "4VtVD", "name": "Monster World", "creator": "Iggy Raven", "label": "Iggy Raven · Monster World", "firstDay": 0, "series": [468, 468, 468, 468]}, {"cid": "4KWke", "name": "The Trap Spinning the Classics", "creator": "TheDirkFiles", "label": "TheDirkFiles · The Trap Spinning the Classics", "firstDay": 0, "series": [399, 399, 399, 399]}, {"cid": "48MkJ", "name": "Dr Nathaniel Sterling", "creator": "Sarah", "label": "Sarah · Dr Nathaniel Sterling", "firstDay": 0, "series": [372, 372, 372, 372]}, {"cid": "4pefe", "name": "Lyra Benett", "creator": "🌑Moon🌑", "label": "🌑Moon🌑 · Lyra Benett", "firstDay": 0, "series": [370, 370, 370, 370]}, {"cid": "4Xe3B", "name": "Damon", "creator": "Loulou ⋆.˚✮", "label": "Loulou ⋆.˚✮ · Damon", "firstDay": 0, "series": [354, 354, 354, 354]}, {"cid": "4UVvq", "name": "璃月", "creator": "夢想", "label": "夢想 · 璃月", "firstDay": 0, "series": [352, 352, 352, 352]}, {"cid": "4KMmg", "name": "Jude Lewis", "creator": "User", "label": "User · Jude Lewis", "firstDay": 0, "series": [305, 305, 305, 305]}, {"cid": "4U2cL", "name": "Tyler Your College Roommate", "creator": "Atlas", "label": "Atlas · Tyler Your College Roommate", "firstDay": 0, "series": [304, 304, 304, 304]}, {"cid": "4acpU", "name": "Lenore Lovelace - Verbotene Resonanz", "creator": "Narzia 🫶🏻🤘🏻", "label": "Narzia 🫶🏻🤘🏻 · Lenore Lovelace - Verbotene Resonanz", "firstDay": 2, "series": [0, 0, 280, 280]}, {"cid": "4VQuk", "name": "你的真面目", "creator": "夢想", "label": "夢想 · 你的真面目", "firstDay": 0, "series": [264, 264, 264, 264]}, {"cid": "4KU6X", "name": "Julie Lewis", "creator": "Sweet_Darling", "label": "Sweet_Darling · Julie Lewis", "firstDay": 0, "series": [12, 12, 262, 262]}, {"cid": "4JsXM", "name": "You and the Campus Maintenance Furry", "creator": "fresa_bear", "label": "fresa_bear · You and the Campus Maintenance Furry", "firstDay": 0, "series": [237, 237, 237, 237]}, {"cid": "4KM2k", "name": "Professor Richelieu", "creator": "Kugai", "label": "Kugai · Professor Richelieu", "firstDay": 0, "series": [174, 174, 174, 174]}, {"cid": "4XAkL", "name": "Hey Alexa", "creator": "TheDirkFiles", "label": "TheDirkFiles · Hey Alexa", "firstDay": 0, "series": [164, 164, 164, 164]}, {"cid": "4XZKu", "name": "Lucian Frost", "creator": "Athena", "label": "Athena · Lucian Frost", "firstDay": 0, "series": [164, 164, 164, 164]}, {"cid": "48Dkt", "name": "Jackie", "creator": "Evan", "label": "Evan · Jackie", "firstDay": 0, "series": [163, 163, 163, 163]}, {"cid": "4USJG", "name": "Zachary", "creator": "珊兒", "label": "珊兒 · Zachary", "firstDay": 0, "series": [159, 159, 159, 159]}, {"cid": "48NDC", "name": "Dr Elena Voss", "creator": "Felegrin", "label": "Felegrin · Dr Elena Voss", "firstDay": 0, "series": [149, 149, 149, 149]}, {"cid": "48Qcy", "name": "Itachi", "creator": "Drisnel", "label": "Drisnel · Itachi", "firstDay": 0, "series": [143, 143, 143, 143]}, {"cid": "4VsYR", "name": "Emma Whitmore", "creator": "Felegrin", "label": "Felegrin · Emma Whitmore", "firstDay": 0, "series": [135, 135, 135, 135]}, {"cid": "4XZSV", "name": "Caspian de Crespigny", "creator": "Athena", "label": "Athena · Caspian de Crespigny", "firstDay": 0, "series": [114, 115, 115, 115]}, {"cid": "48F7Z", "name": "Inoko - College Hang About", "creator": "Riyuka", "label": "Riyuka · Inoko - College Hang About", "firstDay": 0, "series": [86, 86, 86, 86]}, {"cid": "4JNMH", "name": "Bethany first date", "creator": "keithmerk", "label": "keithmerk · Bethany first date", "firstDay": 0, "series": [82, 82, 82, 82]}, {"cid": "48XcM", "name": "You and Your Strict Wolf Professor", "creator": "fresa_bear", "label": "fresa_bear · You and Your Strict Wolf Professor", "firstDay": 0, "series": [70, 70, 70, 70]}, {"cid": "48Gzm", "name": "Valen", "creator": "Rhaen", "label": "Rhaen · Valen", "firstDay": 0, "series": [55, 55, 55, 55]}, {"cid": "4UJ9J", "name": "Santa at school", "creator": "keithmerk", "label": "keithmerk · Santa at school", "firstDay": 0, "series": [32, 32, 32, 32]}, {"cid": "48qmC", "name": "Ruby", "creator": "keithmerk", "label": "keithmerk · Ruby", "firstDay": 0, "series": [31, 31, 31, 31]}, {"cid": "48AZr", "name": "Kai Mercer Golden Boy", "creator": "Minahil Potter", "label": "Minahil Potter · Kai Mercer Golden Boy", "firstDay": 0, "series": [29, 29, 29, 29]}, {"cid": "48LLb", "name": "Lisa part two", "creator": "keithmerk", "label": "keithmerk · Lisa part two", "firstDay": 0, "series": [26, 26, 26, 26]}, {"cid": "48XM2", "name": "You and Your Shy Dorm Roomate", "creator": "fresa_bear", "label": "fresa_bear · You and Your Shy Dorm Roomate", "firstDay": 0, "series": [24, 24, 24, 24]}, {"cid": "48fQN", "name": "Kei Tendou", "creator": "Evan", "label": "Evan · Kei Tendou", "firstDay": 0, "series": [10, 10, 10, 10]}, {"cid": "4JuLK", "name": "Ren Akabane", "creator": "Minty", "label": "Minty · Ren Akabane", "firstDay": 0, "series": [8, 8, 8, 8]}, {"cid": "44cgf", "name": "Noemi", "creator": "Sven", "label": "Sven · Noemi", "firstDay": 0, "series": [0, 2, 2, 2]}, {"cid": "48RR2", "name": "Secrets of Blackwood University", "creator": "Minahil Potter", "label": "Minahil Potter · Secrets of Blackwood University", "firstDay": 0, "series": [1, 1, 1, 1]}, {"cid": "48md9", "name": "艾拉", "creator": "夢想", "label": "夢想 · 艾拉", "firstDay": 0, "series": [1, 1, 1, 1]}, {"cid": "4KAS4", "name": "Andrew Young - Nerd", "creator": "Sweet_Darling", "label": "Sweet_Darling · Andrew Young - Nerd", "firstDay": 0, "series": [0, 0, 0, 0]}, {"cid": "4byyF", "name": "Aetherfall Academy", "creator": "Astoria2tellya", "label": "Astoria2tellya · Aetherfall Academy", "firstDay": 2, "series": [0, 0, 0, 0]}], "updatedAt": "2026-07-03T15:14:51"};
+
+    // ── Unified animation constants (single source of truth) ──
+    const ROW_H = 39;
+    const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    // ── DOM refs ──
+    const barsChartEl = document.getElementById('barsChart');
+    const linesChartEl = document.getElementById('linesChart');
+    const linesPanel = document.getElementById('linesPanel');
+    const barsPanel = document.getElementById('barsPanel');
+    const dateLabel = document.getElementById('dateLabel');
+    const activityTitle = document.getElementById('activityTitle');
+    const foot = document.getElementById('foot');
+    const playBtn = document.getElementById('playBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const topSelect = document.getElementById('topSelect');
+    const topLabel = document.getElementById('topLabel');
+    const viewModeLabel = document.getElementById('viewModeLabel');
+    const viewModeSelect = document.getElementById('viewModeSelect');
+    const linesBotsLabel = document.getElementById('linesBotsLabel');
+    const botPickerBtn = document.getElementById('botPickerBtn');
+    const botPickerMenu = document.getElementById('botPickerMenu');
+    const botPickerList = document.getElementById('botPickerList');
+    const speedSelect = document.getElementById('speedSelect');
+    const barsBtn = document.getElementById('barsBtn');
+    const linesBtn = document.getElementById('linesBtn');
+
+    function segmentMs() {
+      const speed = Number(speedSelect.value);
+      return Math.min(5000, Math.max(600, Math.round(1200 / speed)));
+    }
+
+    const BAR_COLORS = [
+      '#ddd6fe', '#e9d5ff', '#c4b5fd', '#ede9fe',
+      '#d8b4fe', '#f3e8ff', '#e0e7ff', '#f5d0fe',
+    ];
+    const LINE_COLORS = [
+      '#7c3aed', '#8b5cf6', '#a78bfa', '#6d28d9',
+      '#9333ea', '#c084fc', '#5b21b6', '#a855f7',
+    ];
+
+    let view = new URLSearchParams(location.search).get('v') === 'lines' ? 'lines' : 'bars';
+    let barViewMode = 'bot';
+    let barRace = null;
+    let lineRace = null;
+    let lineColorMap = new Map();
+    let lineHiddenCids = new Set();
+    let prevBarValues = new Map();
+
+    foot.textContent = `${board.racers?.length || 0} bots · Updated ${board.updatedAt || ''}`;
+    if (board.name) activityTitle.textContent = board.name;
+    else activityTitle.style.display = 'none';
+
+    function lineColorFor(cid) {
+      if (!lineColorMap.has(cid)) {
+        const i = lineColorMap.size;
+        lineColorMap.set(cid, i < LINE_COLORS.length
+          ? LINE_COLORS[i]
+          : `hsl(${(i * 137.508) % 360}, 65%, 52%)`);
+      }
+      return lineColorMap.get(cid);
+    }
+
+    function barColor(i) { return BAR_COLORS[i % BAR_COLORS.length]; }
+
+    function rankClass(i) {
+      if (i === 0) return 'rank top1';
+      if (i === 1) return 'rank top2';
+      if (i === 2) return 'rank top3';
+      return 'rank';
+    }
+
+    function fmt(n) { return Number(Math.round(n)).toLocaleString('en-US'); }
+
+    function fmtDate(iso) {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function sortedRacers() {
+      const idx = board.days.length - 1;
+      return [...board.racers]
+        .map(r => ({ ...r, value: r.series[idx] ?? 0 }))
+        .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+    }
+
+    let selectedCids = new Set(sortedRacers().slice(0, 20).map(r => r.cid));
+
+    // ── Interpolation model: value(t) = lerp(dayA, dayB, progress) ──
+    function racerValueAt(r, t) {
+      if (!board.days?.length || t < r.firstDay) return 0;
+      const n = board.days.length - 1;
+      const clamped = Math.max(0, Math.min(t, n));
+      const i0 = Math.floor(clamped);
+      const i1 = Math.min(i0 + 1, n);
+      const frac = clamped - i0;
+      const v0 = r.series[i0] ?? 0;
+      const v1 = r.series[i1] ?? v0;
+      return lerp(v0, v1, frac);
+    }
+
+    function racersAtDay(dayIdx, mode) {
+      const i = Math.max(0, Math.min(Math.round(dayIdx), board.days.length - 1));
+      let racers = board.racers
+        .filter(r => r.firstDay <= i)
+        .map(r => ({ ...r, value: r.series[i] ?? 0 }));
+
+      if (mode === 'author') {
+        const best = new Map();
+        for (const r of racers) {
+          const key = (r.creator || '').trim() || r.label;
+          const prev = best.get(key);
+          if (!prev || r.value > prev.value || (r.value === prev.value && r.label < prev.label)) {
+            best.set(key, r);
+          }
+        }
+        racers = [...best.values()].map(r => ({
+          ...r,
+          label: (r.creator || '').trim() || r.name || r.label,
+        }));
+      }
+      return racers.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+    }
+
+    function racersAtTime(t, mode) {
+      let racers = board.racers
+        .filter(r => t >= r.firstDay)
+        .map(r => ({ ...r, value: racerValueAt(r, t) }));
+
+      if (mode === 'author') {
+        const best = new Map();
+        for (const r of racers) {
+          const key = (r.creator || '').trim() || r.label;
+          const prev = best.get(key);
+          if (!prev || r.value > prev.value || (r.value === prev.value && r.label < prev.label)) {
+            best.set(key, r);
+          }
+        }
+        racers = [...best.values()].map(r => ({
+          ...r,
+          label: (r.creator || '').trim() || r.name || r.label,
+        }));
+      }
+      return racers.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+    }
+
+    function barFrameAt(t, mode, top) {
+      const i0 = Math.max(0, Math.floor(t));
+      const i1 = Math.min(Math.ceil(t), board.days.length - 1);
+      const frac = t - Math.floor(t);
+
+      const sorted = racersAtTime(t, mode).slice(0, top);
+      const ranks0 = new Map(racersAtDay(i0, mode).slice(0, top + 8).map((r, i) => [r.cid, i]));
+      const ranks1 = new Map(racersAtDay(i1, mode).slice(0, top + 8).map((r, i) => [r.cid, i]));
+
+      return sorted.map((r, rank) => {
+        const r0 = ranks0.has(r.cid) ? ranks0.get(r.cid) : rank;
+        const r1 = ranks1.has(r.cid) ? ranks1.get(r.cid) : rank;
+        const yRank = lerp(r0, r1, frac);
+        return { ...r, rank, y: yRank * ROW_H };
+      });
+    }
+
+    function linePointsAt(r, t) {
+      if (t < r.firstDay) return [];
+      const n = board.days.length;
+      const clampedT = Math.min(Math.max(t, r.firstDay), n - 1);
+      const pts = [];
+      const fi = Math.floor(clampedT);
+
+      for (let i = r.firstDay; i < fi; i++) {
+        pts.push({ x: i, y: r.series[i] ?? 0 });
+      }
+
+      const tipY = racerValueAt(r, clampedT);
+      if (Math.abs(clampedT - fi) < 1e-6) {
+        pts.push({ x: fi, y: tipY });
+      } else {
+        if (fi >= r.firstDay && fi < n) {
+          pts.push({ x: fi, y: r.series[fi] ?? 0 });
+        }
+        pts.push({ x: clampedT, y: tipY });
+      }
+      return pts;
+    }
+
+    function lineMaxAt(racers, t) {
+      let max = 1;
+      for (const r of racers) {
+        const v = racerValueAt(r, t);
+        if (v > max) max = v;
+        for (const p of linePointsAt(r, t)) {
+          if (p.y > max) max = p.y;
+        }
+      }
+      return max;
+    }
+
+    // ── Unified timeline engine ──
+    const timeline = {
+      t: -1,
+      playing: false,
+      raf: null,
+      segFrom: 0,
+      segWall: 0,
+
+      effectiveT() {
+        return this.t < 0 ? 0 : this.t;
+      },
+
+      setT(t, render = true) {
+        this.t = t;
+        if (render) renderFrame(this.effectiveT());
+      },
+
+      durationMs: segmentMs,
+
+      tick(now) {
+        if (!this.playing) return;
+
+        if (this.t < 0) {
+          this.segFrom = 0;
+          this.segWall = now;
+          this.t = 0;
+          renderFrame(0);
+        }
+
+        const dur = this.durationMs();
+        const elapsed = now - this.segWall;
+        const raw = Math.min(1, elapsed / dur);
+        this.t = this.segFrom + ease(raw);
+        renderFrame(this.t);
+
+        if (raw >= 1) {
+          this.t = this.segFrom + 1;
+          renderFrame(this.t);
+          if (this.segFrom + 1 >= board.days.length - 1) {
+            this.t = board.days.length - 1;
+            this.playing = false;
+            playBtn.textContent = '↺ Replay';
+            return;
+          }
+          this.segFrom += 1;
+          this.segWall = now;
+        }
+        this.raf = requestAnimationFrame(ts => this.tick(ts));
+      },
+
+      start() {
+        if (this.playing) return;
+        if (this.t >= board.days.length - 1) this.t = -1;
+        this.playing = true;
+        playBtn.textContent = '⏸ Pause';
+        this.segFrom = this.t < 0 ? 0 : Math.floor(this.t);
+        const frac = this.t < 0 ? 0 : this.t - this.segFrom;
+        this.segWall = performance.now() - frac * this.durationMs();
+        this.raf = requestAnimationFrame(ts => this.tick(ts));
+      },
+
+      stop() {
+        this.playing = false;
+        if (this.raf) cancelAnimationFrame(this.raf);
+        this.raf = null;
+        playBtn.textContent = '▶ Play';
+      },
+
+      restart() {
+        this.stop();
+        this.t = -1;
+        if (lineRace) lineRace.reset();
+        renderFrame(0, { ready: true });
+      },
+    };
+
+    // ── Bar chart renderer (direct frame set, no CSS/inner tween) ──
+    class BarRaceChart {
+      constructor(container) {
+        this.container = container;
+        this.track = document.createElement('div');
+        this.track.className = 'race-track';
+        container.innerHTML = '';
+        container.appendChild(this.track);
+        this.rows = new Map();
+        this.prevRanks = new Map();
+      }
+
+      createRow(cid) {
+        const el = document.createElement('div');
+        el.className = 'race-row';
+        el.dataset.cid = cid;
+        el.innerHTML = `
+          <div class="rank"></div>
+          <div class="race-label"></div>
+          <div class="bar-wrap"><div class="bar"></div></div>
+          <div class="race-value"></div>`;
+        return {
+          el,
+          rank: el.querySelector('.rank'),
+          label: el.querySelector('.race-label'),
+          bar: el.querySelector('.bar'),
+          value: el.querySelector('.race-value'),
+        };
+      }
+
+      render(items, maxVal) {
+        const cids = new Set(items.map(r => r.cid));
+
+        for (const [cid, row] of this.rows) {
+          if (!cids.has(cid)) {
+            row.el.remove();
+            this.rows.delete(cid);
+            this.prevRanks.delete(cid);
+            prevBarValues.delete(cid);
+          }
+        }
+
+        items.forEach((r, rank) => {
+          let row = this.rows.get(r.cid);
+          if (!row) {
+            row = this.createRow(r.cid);
+            this.rows.set(r.cid, row);
+            this.track.appendChild(row.el);
+            row.el.style.opacity = '0';
+          }
+
+          const pct = Math.max(0.2, (r.value / maxVal) * 100);
+          const prevVal = prevBarValues.get(r.cid) ?? r.value;
+          const prevRank = this.prevRanks.get(r.cid);
+          const rankChanged = prevRank != null && prevRank !== rank;
+
+          row.el.style.transition = 'none';
+          row.el.style.transform = `translateY(${r.y}px)`;
+          row.el.style.opacity = '1';
+          row.bar.style.transition = 'none';
+          row.bar.style.width = `${pct}%`;
+          row.bar.style.background = barColor(rank);
+          row.label.textContent = r.label;
+          row.label.title = r.label;
+          row.rank.textContent = rank + 1;
+          row.rank.className = rankClass(rank);
+          row.value.textContent = fmt(r.value);
+
+          if (r.value > prevVal + 0.5) {
+            row.bar.classList.remove('growing');
+            row.bar.offsetHeight;
+            row.bar.classList.add('growing');
+          }
+
+          if (rankChanged) {
+            row.el.classList.remove('rank-changed');
+            row.el.offsetHeight;
+            row.el.classList.add('rank-changed');
+          }
+
+          this.prevRanks.set(r.cid, rank);
+          prevBarValues.set(r.cid, r.value);
+        });
+
+        this.track.style.height = `${Math.max(1, items.length) * ROW_H}px`;
+      }
+    }
+
+    // ── D3 line chart — fractional tip + clip reveal (same timeline as bars) ──
+    class LineRaceChart {
+      constructor(container) {
+        this.el = container;
+        this.uid = 'lc' + Math.random().toString(36).slice(2, 8);
+        this.margin = { top: 14, right: 18, bottom: 36, left: 52 };
+        this.svg = d3.select(container).append('svg');
+        this.g = this.svg.append('g');
+        this.defs = this.svg.append('defs');
+        this.clipPath = this.defs.append('clipPath').attr('id', this.uid);
+        this.clipRect = this.clipPath.append('rect');
+        this.pathsG = this.g.append('g').attr('clip-path', `url(#${this.uid})`);
+        this.tipsG = this.g.append('g');
+        this.xAxisG = this.g.append('g').attr('class', 'axis x-axis');
+        this.yAxisG = this.g.append('g').attr('class', 'axis y-axis');
+        this.yLabel = this.g.append('text').attr('class', 'axis-label').text('Total chats');
+        this.legendEl = d3.select(container).append('div').attr('class', 'line-legend');
+        this.xScale = d3.scaleLinear();
+        this.yScale = d3.scaleLinear();
+        this.lineGen = d3.line()
+          .x(d => this.xScale(d.x))
+          .y(d => this.yScale(d.y))
+          .curve(d3.curveMonotoneX);
+        this._yMax = 1;
+        this._lastT = null;
+        this._lastRacers = null;
+        this._ro = new ResizeObserver(() => {
+          if (this._lastT != null) this.render(this._lastRacers, this._lastT);
+        });
+        this._ro.observe(container);
+      }
+
+      _layout() {
+        const rect = this.el.getBoundingClientRect();
+        this.w = Math.max(200, rect.width - this.margin.left - this.margin.right);
+        this.h = Math.max(160, rect.height - this.margin.top - this.margin.bottom - 36);
+        this.svg.attr('width', rect.width).attr('height', rect.height);
+        this.g.attr('transform', `translate(${this.margin.left},${this.margin.top})`);
+        this.xScale.range([0, this.w]);
+        this.yScale.range([this.h, 0]);
+        this.xAxisG.attr('transform', `translate(0,${this.h})`);
+        this.yLabel.attr('x', -this.h / 2).attr('y', -40)
+          .attr('transform', 'rotate(-90)').attr('text-anchor', 'middle');
+      }
+
+      render(racers, t) {
+        if (!racers.length) return;
+        this._lastRacers = racers;
+        this._lastT = t;
+        this._layout();
+
+        const n = board.days.length;
+        const clampedT = Math.min(Math.max(t, 0), n - 1);
+        this.xScale.domain([0, Math.max(1, n - 1)]);
+
+        const targetMax = lineMaxAt(racers, t);
+        if (timeline.playing) {
+          this._yMax += (targetMax - this._yMax) * 0.18;
+        } else {
+          this._yMax = targetMax;
+        }
+        this.yScale.domain([0, Math.ceil(this._yMax * 1.08)]);
+
+        const xTicks = board.days.map((_, i) => i)
+          .filter(i => i % Math.max(1, Math.ceil(n / 8)) === 0 || i === n - 1);
+        this.xAxisG.call(d3.axisBottom(this.xScale).tickValues(xTicks).tickFormat(i => fmtDate(board.days[i])));
+        this.yAxisG.call(d3.axisLeft(this.yScale).ticks(6).tickFormat(d => fmt(d)));
+
+        this.clipRect
+          .attr('x', 0)
+          .attr('y', -8)
+          .attr('height', this.h + 16)
+          .attr('width', this.xScale(clampedT) + 2);
+
+        const series = racers.map(r => ({
+          cid: r.cid,
+          label: r.label,
+          color: lineColorFor(r.cid),
+          hidden: lineHiddenCids.has(r.cid),
+          pts: linePointsAt(r, t),
+        }));
+
+        const sel = this.pathsG.selectAll('path.line-path').data(series, d => d.cid);
+        sel.enter()
+          .append('path')
+          .attr('class', 'line-path')
+          .attr('fill', 'none')
+          .attr('stroke-width', 2.5)
+          .merge(sel)
+          .attr('d', d => d.pts.length >= 2 ? this.lineGen(d.pts) : (d.pts.length === 1 ? `M${this.xScale(d.pts[0].x)},${this.yScale(d.pts[0].y)}` : null))
+          .attr('stroke', d => d.color)
+          .attr('opacity', d => d.hidden ? 0 : 1);
+        sel.exit().remove();
+
+        const tips = series
+          .filter(d => !d.hidden && d.pts.length)
+          .map(d => ({ cid: d.cid, color: d.color, ...d.pts[d.pts.length - 1] }));
+
+        this.tipsG.selectAll('circle.line-tip').data(tips, d => d.cid)
+          .join(
+            enter => enter.append('circle').attr('class', 'line-tip').attr('r', 4),
+            update => update,
+            exit => exit.remove(),
+          )
+          .attr('cx', d => this.xScale(d.x))
+          .attr('cy', d => this.yScale(d.y))
+          .attr('fill', d => d.color)
+          .attr('stroke', '#fff')
+          .attr('stroke-width', 1.5);
+
+        const leg = this.legendEl.selectAll('.legend-item').data(series, d => d.cid);
+        leg.enter()
+          .append('div')
+          .attr('class', 'legend-item')
+          .html(d => `<span class="legend-swatch" style="background:${d.color}"></span>${d.label}`);
+        leg.classed('off', d => d.hidden);
+        leg.exit().remove();
+        this.legendEl.selectAll('.legend-item').on('click', (_e, d) => {
+          if (lineHiddenCids.has(d.cid)) lineHiddenCids.delete(d.cid);
+          else lineHiddenCids.add(d.cid);
+          this.render(racers, t);
+        });
+      }
+
+      reset() {
+        this._yMax = 1;
+        this._lastT = null;
+      }
+    }
+
+    function getLineRacers() {
+      return board.racers.filter(r => selectedCids.has(r.cid));
+    }
+
+    // ── Single render entry: timeline t drives everything ──
+    function renderFrame(t, { ready = false } = {}) {
+      if (!board.days?.length) return;
+
+      const dayIdx = Math.max(0, Math.min(Math.floor(t), board.days.length - 1));
+      dateLabel.textContent = timeline.t < 0 && ready
+        ? 'Ready'
+        : `${fmtDate(board.days[dayIdx])} · Day ${dayIdx + 1}/${board.days.length}`;
+
+      // Bar chart — always tick (keeps sync when switching views mid-play)
+      const top = Number(topSelect.value);
+      const items = barFrameAt(t, barViewMode, top);
+      const max = Math.max(1, ...items.map(r => r.value));
+      if (!barRace) barRace = new BarRaceChart(barsChartEl);
+      barRace.render(items, max);
+
+      // Line chart — same timeline t, interpolated paths
+      const racers = getLineRacers();
+      if (racers.length) {
+        if (!lineRace || !linesChartEl.querySelector('svg')) {
+          linesChartEl.innerHTML = '';
+          lineRace = new LineRaceChart(linesChartEl);
+        }
+        lineRace.render(racers, t);
+      } else if (view === 'lines') {
+        linesChartEl.innerHTML = '<div class="empty">请在 Bots 菜单中选择要查看的 bot</div>';
+        lineRace = null;
+      }
+    }
+
+    // ── Bot picker ──
+    function updateBotPickerBtn() {
+      const total = board.racers?.length || 0;
+      const count = selectedCids.size;
+      if (!count) botPickerBtn.textContent = 'Select bots';
+      else if (count === total) botPickerBtn.textContent = `All (${count})`;
+      else if (count === 1) {
+        const racer = board.racers.find(r => selectedCids.has(r.cid));
+        botPickerBtn.textContent = racer?.label || '1 bot';
+      } else botPickerBtn.textContent = `${count} bots`;
+    }
+
+    function renderBotPickerList() {
+      botPickerList.innerHTML = sortedRacers().map(r => `
+        <label class="bot-picker-item" title="${r.label}">
+          <input type="checkbox" value="${r.cid}" ${selectedCids.has(r.cid) ? 'checked' : ''} />
+          <span>${r.label}</span>
+        </label>
+      `).join('');
+    }
+
+    function applyLineSelection(nextCids) {
+      selectedCids = new Set(nextCids);
+      renderBotPickerList();
+      updateBotPickerBtn();
+      if (view === 'lines') renderFrame(timeline.effectiveT());
+    }
+
+    function setLinePreset(preset) {
+      const racers = sortedRacers();
+      const next = preset === 'all' ? racers.map(r => r.cid) : racers.slice(0, Number(preset)).map(r => r.cid);
+      applyLineSelection(next);
+    }
+
+    function toggleBotPicker(open) {
+      const next = open ?? botPickerMenu.classList.contains('hidden');
+      botPickerMenu.classList.toggle('hidden', !next);
+      if (next) renderBotPickerList();
+    }
+
+    renderBotPickerList();
+    updateBotPickerBtn();
+
+    botPickerBtn.addEventListener('click', e => { e.stopPropagation(); toggleBotPicker(); });
+    botPickerMenu.addEventListener('click', e => e.stopPropagation());
+    botPickerMenu.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.addEventListener('click', () => setLinePreset(btn.dataset.preset));
+    });
+    botPickerList.addEventListener('change', e => {
+      if (e.target.type !== 'checkbox') return;
+      const next = new Set(selectedCids);
+      if (e.target.checked) next.add(e.target.value);
+      else next.delete(e.target.value);
+      applyLineSelection([...next]);
+    });
+    document.addEventListener('click', () => toggleBotPicker(false));
+
+    function setView(next) {
+      timeline.stop();
+      toggleBotPicker(false);
+      view = next;
+      barsBtn.classList.toggle('active', view === 'bars');
+      linesBtn.classList.toggle('active', view === 'lines');
+      barsPanel.classList.toggle('hidden', view !== 'bars');
+      linesPanel.classList.toggle('hidden', view !== 'lines');
+      topLabel.classList.toggle('hidden', view !== 'bars');
+      viewModeLabel.classList.toggle('hidden', view !== 'bars');
+      linesBotsLabel.classList.toggle('hidden', view !== 'lines');
+      renderFrame(timeline.effectiveT(), { ready: timeline.t < 0 });
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (timeline.playing) timeline.stop();
+      else timeline.start();
+    });
+
+    restartBtn.addEventListener('click', () => timeline.restart());
+
+    topSelect.addEventListener('change', () => renderFrame(timeline.effectiveT()));
+    viewModeSelect.addEventListener('change', () => {
+      barViewMode = viewModeSelect.value;
+      renderFrame(timeline.effectiveT());
+    });
+
+    barsBtn.addEventListener('click', () => setView('bars'));
+    linesBtn.addEventListener('click', () => setView('lines'));
+
+    // ── Init ──
+    if (!board.days?.length) {
+      barsChartEl.innerHTML = `<div class="empty">
+        <p>暂无数据</p>
+        <p style="margin-top:12px;font-size:13px;line-height:1.8">
+          1. 编辑 <code>bots.txt</code> 添加 bot cid<br>
+          2. 运行 <code>python3 track.py</code> 采集<br>
+          3. 运行 <code>python3 build.py --open</code> 刷新页面
+        </p>
+      </div>`;
+    } else {
+      setView(view);
+    }
+  </script>
+</body>
+</html>
