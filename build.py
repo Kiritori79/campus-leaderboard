@@ -59,7 +59,7 @@ def build_board(rows: list[dict]) -> dict:
     if not sorted_dates:
         return {"name": load_activity_name(), "days": [], "racers": []}
 
-    days = date_range(sorted_dates[0], sorted_dates[-1])
+    days = sorted_dates
     racers = []
 
     for cid, info in by_cid.items():
